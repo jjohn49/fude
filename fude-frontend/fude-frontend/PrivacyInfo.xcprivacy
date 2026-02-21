@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Fude does not track users across apps or websites -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<!-- All food and fitness data is stored locally on-device only.
+	     Network requests go to OpenFoodFacts (barcode lookup) and the
+	     user's own backend (USDA food search proxy). No data is sent
+	     to Fude servers or shared with third parties. -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+
+	<!-- SwiftData reads and writes file timestamps when managing its
+	     SQLite store. Disk space is checked before writing new entries. -->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- App functionality: SwiftData uses file timestamps
+				     to manage its persistent store -->
+				<string>C617.1</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+			<keDy>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<!-- App functionality: checked before writing food log
+				     entries to the SwiftData store -->
+				<string>E174.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

@@ -6,5 +6,28 @@
 	<string>Fude uses Face ID to keep your health data private.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Fude uses the camera to scan food barcodes.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- pi.local: Raspberry Pi running the backend on the local network -->
+		<!-- localhost: fallback when running the backend directly on the Mac -->
+		<!-- All other connections (OpenFoodFacts, USDA proxy in prod) must use HTTPS -->
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>pi.local</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<false/>
+			</dict>
+			<key>localhost</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<false/>
+			</dict>
+		</dict>
+	</dict>
 </dict>
 </plist>
