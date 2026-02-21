@@ -1,0 +1,25 @@
+# Claude Code
+CLAUDE.md
+
+# macOS
+.DS_Store
+
+# Xcode build artifacts & user data
+build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.swiftpm/
+.build/
+
+# Go backend build output
+fude-backend/fude-backend
+
+# Environment files with secrets
+fude-backend/.env
+fude-backend/.env.example
