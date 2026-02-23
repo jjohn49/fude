@@ -27,7 +27,8 @@ This repository tracks product and implementation planning in this file. Use it 
 - Tap ring cluster to “unravel” into a 7‑day line chart of calories + macros.
 - Preserve macro color mapping in the trend chart.
 - Include a micronutrients expansion section in the drilldown panel.
-- **Implemented:** `DashboardView` ring cluster toggles a `MacroTrendDrilldownView` panel in the hero card. Tapping rings triggers a spin/unravel animation into a 7-day multi-line trend (Calories/Protein/Carbs/Fat), preserves macro color tokens, and includes an expandable micronutrients section (fiber/sugar/sodium) computed from logged entries.
+- **Implemented:** `DashboardView` ring cluster toggles a `RingTrendMorphView` in the same hero canvas area (no separate chart card). Tapping rings triggers a staged spin→unravel animation into a 7-day multi-line trend (Calories/Protein/Carbs/Fat), preserves macro color tokens, and includes an expandable micronutrients section (`MacroTrendDrilldownView`) below the legend (fiber/sugar/sodium) computed from logged entries.
+- **Animation behavior:** expand transition is sequential (rings spin, then each ring unwraps into its corresponding trend line with per-ring staggering). Collapse uses the same surface tap/back action and reverses back to concentric rings.
 
 ## Phase 5 — Workout Tab: Map + List
 - Two‑mode Workout tab: map-first view and list view of all workouts.
@@ -110,6 +111,7 @@ This repository tracks product and implementation planning in this file. Use it 
 | `ActivityRingsView` | `Views/Dashboard/ActivityRingsView.swift` | ✅ Implemented — concentric rings, spring-animated |
 | `WeeklyInsightsView` | `Views/Dashboard/WeeklyInsightsView.swift` | ✅ Implemented |
 | `MacroTrendDrilldownView` | `Views/Dashboard/MacroTrendDrilldownView.swift` | ✅ Implemented |
+| `RingTrendMorphView` | `Views/Dashboard/RingTrendMorphView.swift` | ✅ Implemented — in-place rings→line-chart morph animation |
 | `TopBarTitle` | `Views/Components/TopBarTitle.swift` | ✅ Implemented |
 | `TopBarIconButton` | `Views/Components/TopBarIconButton.swift` | ✅ Implemented |
 | `TopBarTextButton` | `Views/Components/TopBarTextButton.swift` | ✅ Implemented |

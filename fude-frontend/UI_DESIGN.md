@@ -221,12 +221,15 @@ Add a short, data-driven insights section that ties training load to nutrition g
 
 **Rings → trends drilldown (new):**
 Tapping the macro rings expands them into a weekly trend view.
-- Animated “unravel” from rings into a line chart.
-- Shows Calories, Protein, Carbs as three lines (Fat as optional toggle).
+- Animated “unravel” from rings into a line chart in the **same hero canvas** (no separate top chart card).
+- Shows Calories, Protein, Carbs, and Fat as four lines.
 - Default range: last 7 days.
 - Keep labels minimal and numeric (analytical, not decorative).
- - **Motion direction:** ring center expands outward into chart axes; lines draw in from left to right with a 60ms stagger.
- - **Transition feel:** confident and fluid, no bounce; 500–650ms total.
+ - **Motion direction:** ring cluster spins, then rings unwrap sequentially into their corresponding trend lines.
+ - **Staging:** per-ring stagger in outer→inner order; each line draws left→right after its ring unwrap starts.
+ - **Transition feel:** confident and fluid, no bounce.
+ - **Reverse interaction:** tapping the same hero canvas (or "Back to Rings") reverses the morph back to concentric rings.
+ - **Supporting panel:** micronutrient details (fiber/sugar/sodium) expand below the ring legend in `MacroTrendDrilldownView`.
 
 **Post-workout recovery window (anabolic window, new):**
 A dashboard widget that appears after a logged workout (HealthKit future). It includes a countdown + two progress bars tracking post-workout intake.
@@ -494,6 +497,8 @@ The analytics weight chart requires data input. Add a weight logging widget — 
 - **Macro target hit pulse:** `220ms`, ease-out. Ring stroke thickens + 6% scale pulse, then returns.
 - **Dashboard card rise-in:** `300ms`, cubic-bezier(0.2, 0.9, 0.2, 1.0). Fade 0→1 and translate `8pt` upward.
 - **Ring sweep on load:** `800ms`, cubic-bezier(0.16, 1.0, 0.3, 1.0). Sweep 0→current value; stagger macro rings by `60ms`.
+- **Rings → trend morph (in-place):** `~1050ms` expand, timing-curve `(0.18, 0.84, 0.24, 1.0)`. Sequence: spin ring cluster → unwrap each ring with stagger (`~120ms`) → draw each line in order.
+- **Trend → rings reverse:** `~700ms` collapse using the same interaction surface; reverse the unwrap/line draw sequence back to concentric rings.
 - **Insight chip highlight:** `180ms`, ease-out. Background gradient ramps to `fudeAccent` at 15% then returns.
 
 Respect `@Environment(\.accessibilityReduceMotion)` — disable all non-essential animations when enabled.
