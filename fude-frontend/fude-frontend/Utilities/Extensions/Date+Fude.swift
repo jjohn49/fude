@@ -26,4 +26,11 @@ extension Date {
     func isSameDay(as other: Date) -> Bool {
         Calendar.current.isDate(self, inSameDayAs: other)
     }
+
+    /// e.g. "Tue, Feb 14" — used in FoodLogView compact date button
+    var compactFormatted: String {
+        let f = DateFormatter()
+        f.dateFormat = "EEE, MMM d"
+        return f.string(from: self)
+    }
 }

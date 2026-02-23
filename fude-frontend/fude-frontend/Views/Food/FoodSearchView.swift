@@ -1,16 +1,23 @@
 import SwiftUI
 import SwiftData
 
+private enum QuickTab: String, CaseIterable {
+    case recent = "Recent"
+    case favourites = "Favourites"
+}
+
 struct FoodSearchView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
     /// The meal name to pre-select in AddFoodEntryView (e.g. passed from FoodLogView).
     var preselectedMeal: String? = nil
+    /// The date to log the entry against. Defaults to today.
+    var targetDate: Date = Date()
 
     @State private var viewModel = FoodSearchViewModel()
     @State private var selectedItem: FoodItem? = nil
-    @State private var showDetail = false
+    @State private var quickTab: QuickTab = .recent
 
     var body: some View {
         NavigationStack {
@@ -21,6 +28,7 @@ struct FoodSearchView: View {
                     Label("Scan", systemImage: "barcode.viewfinder").tag(FoodSearchMode.barcode)
                 }
                 .pickerStyle(.segmented)
+                .tint(.fudeAccentPrimary)
                 .padding()
 
                 if viewModel.mode == .text {
@@ -29,21 +37,28 @@ struct FoodSearchView: View {
                     barcodeContent
                 }
             }
-            .navigationTitle("Add Food")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    TopBarTitle(text: "Add Food")
+                }
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    TopBarTextButton(title: "Cancel") { dismiss() }
                 }
             }
-            .sheet(isPresented: $showDetail) {
-                if let item = selectedItem {
-                    AddFoodEntryView(
-                        foodItem: item,
-                        preselectedMeal: preselectedMeal
-                    ) {
-                        dismiss()
-                    }
+            .background(Color.fudeBackground)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(Color.fudePerformanceBackground, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .preferredColorScheme(.dark)
+            .sheet(item: $selectedItem) { item in
+                AddFoodEntryView(
+                    foodItem: item,
+                    targetDate: targetDate,
+                    preselectedMeal: preselectedMeal
+                ) {
+                    dismiss()
                 }
             }
             .onChange(of: viewModel.mode) { _, _ in
@@ -62,9 +77,14 @@ struct FoodSearchView: View {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                TextField("Search foods…", text: $viewModel.query)
+                TextField(text: $viewModel.query, prompt: Text("Search foods…").foregroundStyle(.secondary)) {
+                    Text("Search foods…")
+                }
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
+                    .foregroundStyle(.primary)
+                    .foregroundColor(.white)
+                    .tint(.fudeAccentPrimary)
                     .submitLabel(.search)
                     .onChange(of: viewModel.query) { _, _ in
                         viewModel.onQueryChanged(modelContext: modelContext)
@@ -80,14 +100,94 @@ struct FoodSearchView: View {
                 }
             }
             .padding(10)
-            .background(Color(.secondarySystemBackground))
+            .background(Color.fudeSurface)
             .clipShape(RoundedRectangle(cornerRadius: 10))
-            .padding(.horizontal)
+            .padding(.horizontal, 12)
             .padding(.bottom, 8)
 
-            searchStateContent
+            if viewModel.query.isEmpty {
+                quickAccessContent
+            } else {
+                searchStateContent
+            }
         }
     }
+
+    // MARK: - Shared Food Row
+
+    @ViewBuilder
+    private func foodRow(_ item: FoodItem) -> some View {
+        Button {
+            selectedItem = item
+        } label: {
+            FoodSearchResultRow(item: item)
+                .padding(12)
+                .background(Color.fudeSurface)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.primary)
+        .padding(.horizontal, 12)
+    }
+
+    // MARK: - Quick Access (Recent / Favourites)
+
+    @ViewBuilder
+    private var quickAccessContent: some View {
+        VStack(spacing: 0) {
+            Picker("Quick Access", selection: $quickTab) {
+                ForEach(QuickTab.allCases, id: \.self) { tab in
+                    Text(tab.rawValue).tag(tab)
+                }
+            }
+            .pickerStyle(.segmented)
+            .tint(.fudeAccentPrimary)
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
+
+            let items = quickFoods
+            if items.isEmpty {
+                quickEmptyState
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(items, id: \.id) { foodRow($0) }
+                    }
+                    .padding(.top, 4)
+                    .padding(.bottom, 24)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var quickEmptyState: some View {
+        switch quickTab {
+        case .recent:
+            EmptyStateView(
+                systemImage: "clock",
+                title: "No recent foods",
+                message: "Foods you log will appear here."
+            )
+        case .favourites:
+            EmptyStateView(
+                systemImage: "star",
+                title: "No favourites yet",
+                message: "Log a food 3+ times and it will appear here."
+            )
+        }
+    }
+
+    private var quickFoods: [FoodItem] {
+        switch quickTab {
+        case .recent:
+            return viewModel.recentFoods(modelContext: modelContext)
+        case .favourites:
+            return viewModel.favouriteFoods(modelContext: modelContext)
+        }
+    }
+
+    // MARK: - Search Results
 
     @ViewBuilder
     private var searchStateContent: some View {
@@ -103,16 +203,22 @@ struct FoodSearchView: View {
             LoadingStateView(message: "Searching…")
 
         case .results(let items):
-            List(items, id: \.id) { item in
-                Button {
-                    selectedItem = item
-                    showDetail = true
-                } label: {
-                    FoodSearchResultRow(item: item)
+            let localCount = viewModel.localResultCount
+            let showSections = localCount > 0 && items.count > localCount
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    if showSections {
+                        SectionHeader(title: "Your Foods").padding(.horizontal, 12)
+                        ForEach(Array(items.prefix(localCount)), id: \.id) { foodRow($0) }
+                        SectionHeader(title: "All Foods").padding(.horizontal, 12)
+                        ForEach(Array(items.dropFirst(localCount)), id: \.id) { foodRow($0) }
+                    } else {
+                        ForEach(items, id: \.id) { foodRow($0) }
+                    }
                 }
-                .foregroundStyle(.primary)
+                .padding(.top, 4)
+                .padding(.bottom, 24)
             }
-            .listStyle(.plain)
 
         case .empty:
             EmptyStateView(

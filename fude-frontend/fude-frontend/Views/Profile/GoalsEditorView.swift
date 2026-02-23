@@ -11,43 +11,43 @@ struct GoalsEditorView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Daily Targets") {
-                    LabeledContent("Calories (kcal)") {
-                        TextField("2000", text: $calories)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
+            ScrollView {
+                VStack(spacing: 16) {
+                    SectionHeader(title: "Daily Targets")
+                    VStack(spacing: 12) {
+                        goalFieldRow(label: "Calories (kcal)", text: $calories, placeholder: "2000")
+                        goalFieldRow(label: "Protein (g)", text: $protein, placeholder: "150")
+                        goalFieldRow(label: "Carbohydrates (g)", text: $carbs, placeholder: "200")
+                        goalFieldRow(label: "Fat (g)", text: $fat, placeholder: "65")
                     }
-                    LabeledContent("Protein (g)") {
-                        TextField("150", text: $protein)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                    }
-                    LabeledContent("Carbohydrates (g)") {
-                        TextField("200", text: $carbs)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                    }
-                    LabeledContent("Fat (g)") {
-                        TextField("65", text: $fat)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                    }
+                    .padding(12)
+                    .background(Color.fudeSurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .padding(.horizontal, 12)
                 }
+                .padding(.bottom, 32)
             }
-            .navigationTitle("Edit Goals")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .scrollContentBackground(.hidden)
+            .background(Color.fudeBackground)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    TopBarTitle(text: "Edit Goals")
+                }
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    TopBarTextButton(title: "Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    TopBarTextButton(title: "Save", systemImage: "checkmark") {
                         save()
                         dismiss()
                     }
                 }
             }
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(Color.fudePerformanceBackground, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .onAppear {
                 calories = "\(profile.dailyCalorieTarget.roundedCalories)"
                 protein = "\(profile.dailyProteinTarget.roundedCalories)"
@@ -55,6 +55,7 @@ struct GoalsEditorView: View {
                 fat = "\(profile.dailyFatTarget.roundedCalories)"
             }
         }
+        .preferredColorScheme(.dark)
     }
 
     private func save() {
@@ -63,5 +64,21 @@ struct GoalsEditorView: View {
         if let v = Double(carbs) { profile.dailyCarbohydrateTarget = v }
         if let v = Double(fat) { profile.dailyFatTarget = v }
         profile.updatedAt = Date()
+    }
+
+    private func goalFieldRow(label: String, text: Binding<String>, placeholder: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.subheadline.weight(.semibold))
+            Spacer()
+            TextField(text: text, prompt: Text(placeholder).foregroundStyle(.secondary)) {
+                Text(placeholder)
+            }
+            .keyboardType(.numberPad)
+            .multilineTextAlignment(.trailing)
+            .foregroundStyle(.primary)
+            .foregroundColor(.white)
+        }
+        .padding(.vertical, 6)
     }
 }

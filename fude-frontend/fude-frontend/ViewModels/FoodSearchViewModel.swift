@@ -20,6 +20,9 @@ final class FoodSearchViewModel {
     var mode: FoodSearchMode = .text
     var searchState: FoodSearchState = .idle
     var scannedBarcode: String? = nil
+    /// Number of items at the front of the results array that came from the local SwiftData cache.
+    /// Used by FoodSearchView to render a "Your Foods" section above network-only results.
+    var localResultCount: Int = 0
 
     private let offService = OpenFoodFactsService()
     private let proxyService = FoodProxyService()
@@ -29,6 +32,8 @@ final class FoodSearchViewModel {
 
     func onQueryChanged(modelContext: ModelContext) {
         searchTask?.cancel()
+        localResultCount = 0
+
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard trimmed.count >= 2 else {
             searchState = .idle
@@ -41,13 +46,14 @@ final class FoodSearchViewModel {
             try? await Task.sleep(for: .milliseconds(400))
             guard !Task.isCancelled else { return }
 
-            // Check local SwiftData cache first
+            // 1. Show local SwiftData cache immediately
             let cached = fetchCached(query: trimmed, modelContext: modelContext)
+            localResultCount = cached.count
             if !cached.isEmpty {
                 searchState = .results(cached)
             }
 
-            // Then hit the backend for fresh results
+            // 2. Fetch fresh results from backend
             do {
                 let results = try await proxyService.search(query: trimmed)
                 guard !Task.isCancelled else { return }
@@ -57,10 +63,17 @@ final class FoodSearchViewModel {
                     upsertFoodItem(item, modelContext: modelContext)
                 }
 
-                searchState = results.isEmpty ? .empty : .results(results)
+                // Merge: local items first, then network-only items (deduplicated by externalID)
+                let localIDs = Set(cached.map { $0.externalID })
+                let networkOnly = results.filter { !localIDs.contains($0.externalID) }
+                let merged = cached + networkOnly
+
+                localResultCount = cached.count  // preserved at front of merged array
+                searchState = merged.isEmpty ? .empty : .results(merged)
             } catch {
                 guard !Task.isCancelled else { return }
-                if case .empty = searchState { } else if cached.isEmpty {
+                // Keep showing local results if we have them; only show error if nothing to show
+                if cached.isEmpty {
                     searchState = .error(error.localizedDescription)
                 }
             }
@@ -131,5 +144,50 @@ final class FoodSearchViewModel {
     private func isStale(_ item: FoodItem) -> Bool {
         let age = Date().timeIntervalSince(item.cachedAt)
         return age > FoodItemCacheTTL.days * 86_400
+    }
+
+    // MARK: - Quick Access
+
+    /// Returns up to 10 most-recently-logged unique FoodItems.
+    func recentFoods(modelContext: ModelContext) -> [FoodItem] {
+        var descriptor = FetchDescriptor<FoodEntry>(
+            sortBy: [SortDescriptor(\.loggedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 50
+        guard let entries = try? modelContext.fetch(descriptor) else { return [] }
+
+        var seen = Set<PersistentIdentifier>()
+        var result: [FoodItem] = []
+        for entry in entries {
+            guard let item = entry.foodItem else { continue }
+            let pid = item.persistentModelID
+            if seen.insert(pid).inserted {
+                result.append(item)
+                if result.count >= 10 { break }
+            }
+        }
+        return result
+    }
+
+    /// Returns FoodItems logged 3+ times, sorted by frequency descending.
+    func favouriteFoods(modelContext: ModelContext) -> [FoodItem] {
+        let descriptor = FetchDescriptor<FoodEntry>()
+        guard let entries = try? modelContext.fetch(descriptor) else { return [] }
+
+        var frequency: [PersistentIdentifier: (FoodItem, Int)] = [:]
+        for entry in entries {
+            guard let item = entry.foodItem else { continue }
+            let pid = item.persistentModelID
+            if let existing = frequency[pid] {
+                frequency[pid] = (existing.0, existing.1 + 1)
+            } else {
+                frequency[pid] = (item, 1)
+            }
+        }
+
+        return frequency.values
+            .filter { $0.1 >= 3 }
+            .sorted { $0.1 > $1.1 }
+            .map { $0.0 }
     }
 }

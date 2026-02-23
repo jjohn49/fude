@@ -11,9 +11,8 @@ struct FoodDetailView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                // Header
-                Section {
+            ScrollView {
+                VStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(foodItem.name)
                             .font(.title3.bold())
@@ -24,63 +23,81 @@ struct FoodDetailView: View {
                         }
                         HStack {
                             Text(foodItem.source == FoodSource.openFoodFacts ? "OpenFoodFacts" : "USDA")
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
+                                .font(.caption.weight(.semibold))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
                                 .background(foodItem.source == FoodSource.openFoodFacts ? Color.green.opacity(0.15) : Color.blue.opacity(0.15))
                                 .foregroundStyle(foodItem.source == FoodSource.openFoodFacts ? Color.green : Color.blue)
                                 .clipShape(Capsule())
                         }
                     }
-                    .padding(.vertical, 4)
-                }
+                    .padding(12)
+                    .background(Color.fudeSurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .padding(.horizontal, 12)
 
-                // Nutrition facts per 100g
-                Section("Nutrition per 100g") {
-                    NutritionFactRow(label: "Calories", value: "\(foodItem.caloriesPer100g.roundedCalories) kcal", color: .fudeCalorieRing, isBold: true)
-                    NutritionFactRow(label: "Protein", value: foodItem.proteinPer100g.gramString, color: .fudeProtein)
-                    NutritionFactRow(label: "Carbohydrates", value: foodItem.carbohydratesPer100g.gramString, color: .fudeCarbs)
-                    NutritionFactRow(label: "Fat", value: foodItem.fatPer100g.gramString, color: .fudeFat)
-                    if let fiber = foodItem.fiberPer100g {
-                        NutritionFactRow(label: "Fiber", value: fiber.gramString, color: .fudeFiber)
+                    SectionHeader(title: "Nutrition per 100g")
+                    VStack(spacing: 10) {
+                        NutritionFactRow(label: "Calories", value: "\(foodItem.caloriesPer100g.roundedCalories) kcal", color: .fudeCalorieRing, isBold: true)
+                        NutritionFactRow(label: "Protein", value: foodItem.proteinPer100g.gramString, color: .fudeProtein)
+                        NutritionFactRow(label: "Carbohydrates", value: foodItem.carbohydratesPer100g.gramString, color: .fudeCarbs)
+                        NutritionFactRow(label: "Fat", value: foodItem.fatPer100g.gramString, color: .fudeFat)
+                        if let fiber = foodItem.fiberPer100g {
+                            NutritionFactRow(label: "Fiber", value: fiber.gramString, color: .fudeFiber)
+                        }
+                        if let sugar = foodItem.sugarPer100g {
+                            NutritionFactRow(label: "Sugar", value: sugar.gramString, color: .fudeCarbs)
+                        }
+                        if let sodium = foodItem.sodiumPer100mg {
+                            NutritionFactRow(label: "Sodium", value: "\(sodium.roundedCalories) mg", color: .gray)
+                        }
                     }
-                    if let sugar = foodItem.sugarPer100g {
-                        NutritionFactRow(label: "Sugar", value: sugar.gramString, color: .orange)
-                    }
-                    if let sodium = foodItem.sodiumPer100mg {
-                        NutritionFactRow(label: "Sodium", value: "\(sodium.roundedCalories) mg", color: .gray)
-                    }
-                }
+                    .padding(12)
+                    .background(Color.fudeSurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .padding(.horizontal, 12)
 
-                // Serving info
-                Section("Serving") {
-                    LabeledContent("Serving size", value: foodItem.servingSizeDescription)
-                }
+                    SectionHeader(title: "Serving")
+                    VStack(spacing: 10) {
+                        KeyValueRow(label: "Serving size", value: foodItem.servingSizeDescription)
+                    }
+                    .padding(12)
+                    .background(Color.fudeSurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .padding(.horizontal, 12)
 
-                // Log button
-                Section {
                     Button {
                         showAddEntry = true
                     } label: {
-                        Label("Log this food", systemImage: "plus.circle.fill")
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .foregroundStyle(.white)
-                            .padding(.vertical, 4)
+                        HStack(spacing: 8) {
+                            Image(systemName: "plus")
+                            Text("Log this food")
+                        }
                     }
-                    .listRowBackground(Color.orange)
+                    .buttonStyle(FudePrimaryButtonStyle())
+                    .padding(.horizontal, 12)
                 }
+                .padding(.bottom, 32)
             }
-            .navigationTitle("Food Details")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .background(Color.fudeBackground)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    TopBarTitle(text: "Food Details")
+                }
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Back") { dismiss() }
+                    TopBarTextButton(title: "Back", systemImage: "chevron.left") { dismiss() }
                 }
             }
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(Color.fudePerformanceBackground, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
         }
         .sheet(isPresented: $showAddEntry) {
             AddFoodEntryView(
                 foodItem: foodItem,
+                targetDate: Date(),
                 preselectedMeal: preselectedMeal,
                 onLogged: onLogged
             )

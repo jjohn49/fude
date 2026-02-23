@@ -26,7 +26,7 @@ struct EmptyStateView: View {
 
             if let actionTitle, let action {
                 Button(actionTitle, action: action)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(FudePrimaryButtonStyle())
                     .padding(.top, 8)
             }
         }

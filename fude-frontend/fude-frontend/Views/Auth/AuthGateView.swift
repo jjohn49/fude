@@ -11,7 +11,14 @@ struct AuthGateView: View {
     var body: some View {
         switch authViewModel.state {
         case .unknown:
-            ProgressView("Loading…")
+            VStack(spacing: 12) {
+                ProgressView()
+                    .tint(.fudeAccentPrimary)
+                    .scaleEffect(1.1)
+                Text("Loading…")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
                 .task {
                     await authViewModel.checkAuthState(modelContext: modelContext)
                 }
@@ -48,7 +55,7 @@ private struct SetupView: View {
                 Image(systemName: "fork.knife.circle.fill")
                     .resizable()
                     .frame(width: 80, height: 80)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color.fudeAccentPrimary)
 
                 Text("Welcome to Fude")
                     .font(.largeTitle.bold())
@@ -64,11 +71,16 @@ private struct SetupView: View {
                     .font(.headline)
 
                 TextField("Your name", text: $displayName)
-                    .textFieldStyle(.roundedBorder)
                     .textContentType(.givenName)
                     .focused($nameFieldFocused)
                     .submitLabel(.go)
                     .onSubmit { startApp() }
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 12)
+                    .background(Color.fudeSurface)
+                    .foregroundStyle(.primary)
+                    .foregroundColor(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .padding(.horizontal, 32)
 
@@ -77,13 +89,8 @@ private struct SetupView: View {
             VStack(spacing: 12) {
                 Button(action: startApp) {
                     Text("Get Started")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(displayName.trimmingCharacters(in: .whitespaces).isEmpty ? Color.orange.opacity(0.5) : Color.orange)
-                        .foregroundStyle(.white)
-                        .font(.headline)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
+                .buttonStyle(FudePrimaryButtonStyle(background: displayName.trimmingCharacters(in: .whitespaces).isEmpty ? Color.fudeAccentPrimary.opacity(0.5) : Color.fudeAccentPrimary, foreground: .black))
                 .disabled(displayName.trimmingCharacters(in: .whitespaces).isEmpty)
 
                 Text("Your data stays on your device.")
@@ -93,6 +100,8 @@ private struct SetupView: View {
             .padding(.horizontal, 32)
             .padding(.bottom, 48)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.fudeBackground)
         .onAppear { nameFieldFocused = true }
     }
 
@@ -111,7 +120,7 @@ private struct BiometricPromptView: View {
         VStack(spacing: 24) {
             Spacer()
 
-            Image(systemName: "faceid")
+            Image(systemName: "lock.shield.fill")
                 .resizable()
                 .frame(width: 64, height: 64)
                 .foregroundStyle(.blue)
@@ -129,18 +138,20 @@ private struct BiometricPromptView: View {
 
             if authViewModel.isLoading {
                 ProgressView()
+                    .tint(.fudeAccentPrimary)
             } else {
                 Button("Unlock") {
                     Task {
                         await authViewModel.authenticateWithBiometrics()
                     }
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .buttonStyle(FudePrimaryButtonStyle())
             }
 
             Spacer()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.fudeBackground)
         .task {
             await authViewModel.authenticateWithBiometrics()
         }
@@ -158,7 +169,7 @@ private struct ErrorView: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .resizable()
                 .frame(width: 48, height: 48)
-                .foregroundStyle(.orange)
+                .foregroundStyle(Color.fudeAccentPrimary)
 
             Text("Authentication Error")
                 .font(.title3.bold())
@@ -172,7 +183,9 @@ private struct ErrorView: View {
             Button("Try Again") {
                 authViewModel.dismissError()
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(FudePrimaryButtonStyle())
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.fudeBackground)
     }
 }

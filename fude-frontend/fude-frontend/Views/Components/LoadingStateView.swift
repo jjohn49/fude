@@ -7,6 +7,8 @@ struct LoadingStateView: View {
         VStack(spacing: 12) {
             ProgressView()
                 .progressViewStyle(.circular)
+                .tint(.fudeAccentPrimary)
+                .scaleEffect(1.1)
             Text(message)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)

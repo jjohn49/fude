@@ -41,6 +41,9 @@ struct USDAFoodDTO: Decodable {
     let brandOwner: String?
     let brandName: String?
     let foodNutrients: [USDANutrient]
+    /// Serving size amount; unit is given by servingSizeUnit (e.g. 28.35 oz, 100 g)
+    let servingSize: Double?
+    let servingSizeUnit: String?
 
     func toFoodItem() -> FoodItem {
         let item = FoodItem(
@@ -60,6 +63,21 @@ struct USDAFoodDTO: Decodable {
         item.fiberPer100g = nutrientValue(id: 1079).map { $0 == 0 ? nil : $0 } ?? nil
         item.sugarPer100g = nutrientValue(id: 2000).map { $0 == 0 ? nil : $0 } ?? nil
         item.sodiumPer100mg = nutrientValue(id: 1093).map { $0 == 0 ? nil : $0 } ?? nil
+
+        // Serving size — convert to grams if the backend provides it
+        if let size = servingSize, size > 0 {
+            let unit = (servingSizeUnit ?? "g").lowercased()
+            switch unit {
+            case "oz":
+                let grams = size * 28.3495
+                item.servingSizeGrams = grams
+                item.servingSizeDescription = String(format: "%.0f oz (%.0fg)", size, grams)
+            default:
+                // Treat g, ml, and unknown units as-is
+                item.servingSizeGrams = size
+                item.servingSizeDescription = String(format: "%.0f%@", size, servingSizeUnit ?? "g")
+            }
+        }
 
         return item
     }

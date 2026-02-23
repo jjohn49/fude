@@ -1,31 +1,14 @@
 import SwiftUI
 import SwiftData
 
-// MARK: - Shared Unit Enum (used by AddFoodEntryView + EditFoodEntryView)
-
-/// The unit the user has chosen for the quantity input.
-/// "Servings" is the primary default — the displayed value is divided by servingSizeGrams
-/// to arrive at the gram amount stored on the FoodEntry.
-enum QuantityUnit: String, CaseIterable {
-    case servings = "Servings"
-    case grams    = "Grams"
-    case lbs      = "lbs"
-}
-
-// MARK: - AddFoodEntryView
-
-struct AddFoodEntryView: View {
+struct EditFoodEntryView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
-    let foodItem: FoodItem
-    /// The date this entry should be logged against. Defaults to today.
-    var targetDate: Date = Date()
-    var preselectedMeal: String? = nil
-    var onLogged: (() -> Void)? = nil
+    let entry: FoodEntry
 
     @State private var selectedUnit: QuantityUnit = .servings
-    @State private var quantityText: String = "1"
+    @State private var quantityText: String = ""
     @State private var selectedMeal: String = "Breakfast"
     @State private var notes: String = ""
 
@@ -33,10 +16,12 @@ struct AddFoodEntryView: View {
 
     // MARK: Quantity helpers
 
+    private var servingSizeGrams: Double { entry.foodItem?.servingSizeGrams ?? 100 }
+
     private var quantityInGrams: Double {
         let raw = Double(quantityText) ?? 0
         switch selectedUnit {
-        case .servings: return raw * max(foodItem.servingSizeGrams, 1)
+        case .servings: return raw * max(servingSizeGrams, 1)
         case .grams:    return raw
         case .lbs:      return raw * 453.592
         }
@@ -85,23 +70,20 @@ struct AddFoodEntryView: View {
         }
     }
 
-    // MARK: Macro previews
-
-    private var scaledCalories: Double { foodItem.caloriesPer100g.scaled(by: quantityInGrams) }
-    private var scaledProtein: Double  { foodItem.proteinPer100g.scaled(by: quantityInGrams) }
-    private var scaledCarbs: Double    { foodItem.carbohydratesPer100g.scaled(by: quantityInGrams) }
-    private var scaledFat: Double      { foodItem.fatPer100g.scaled(by: quantityInGrams) }
-
-    // MARK: Body
+    // Live-preview macros based on current quantity input
+    private var scaledCalories: Double { (entry.foodItem?.caloriesPer100g ?? 0).scaled(by: quantityInGrams) }
+    private var scaledProtein: Double  { (entry.foodItem?.proteinPer100g ?? 0).scaled(by: quantityInGrams) }
+    private var scaledCarbs: Double    { (entry.foodItem?.carbohydratesPer100g ?? 0).scaled(by: quantityInGrams) }
+    private var scaledFat: Double      { (entry.foodItem?.fatPer100g ?? 0).scaled(by: quantityInGrams) }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(foodItem.name)
+                        Text(entry.foodItem?.name ?? "Unknown food")
                             .font(.headline)
-                        if let brand = foodItem.brand {
+                        if let brand = entry.foodItem?.brand {
                             Text(brand)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
@@ -149,7 +131,7 @@ struct AddFoodEntryView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "info.circle")
                                     .font(.caption2)
-                                Text("1 serving = \(Int(foodItem.servingSizeGrams))g")
+                                Text("1 serving = \(Int(servingSizeGrams))g")
                                     .font(.caption)
                             }
                             .foregroundStyle(.secondary)
@@ -187,10 +169,10 @@ struct AddFoodEntryView: View {
 
                     SectionHeader(title: "Nutrition (Estimated)")
                     VStack(spacing: 10) {
-                        NutritionRow(label: "Calories", value: scaledCalories.calorieString, color: .fudeCalorieRing)
-                        NutritionRow(label: "Protein", value: scaledProtein.gramString, color: .fudeProtein)
-                        NutritionRow(label: "Carbohydrates", value: scaledCarbs.gramString, color: .fudeCarbs)
-                        NutritionRow(label: "Fat", value: scaledFat.gramString, color: .fudeFat)
+                        NutritionEditRow(label: "Calories", value: scaledCalories.calorieString, color: .fudeCalorieRing)
+                        NutritionEditRow(label: "Protein", value: scaledProtein.gramString, color: .fudeProtein)
+                        NutritionEditRow(label: "Carbohydrates", value: scaledCarbs.gramString, color: .fudeCarbs)
+                        NutritionEditRow(label: "Fat", value: scaledFat.gramString, color: .fudeFat)
                     }
                     .padding(12)
                     .background(Color.fudeSurface)
@@ -217,14 +199,14 @@ struct AddFoodEntryView: View {
             .background(Color.fudeBackground)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    TopBarTitle(text: "Log Food")
+                    TopBarTitle(text: "Edit Entry")
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     TopBarTextButton(title: "Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    TopBarTextButton(title: "Log", systemImage: "checkmark") {
-                        logEntry()
+                    TopBarTextButton(title: "Save", systemImage: "checkmark") {
+                        saveChanges()
                     }
                     .fontWeight(.semibold)
                     .disabled(quantityInGrams <= 0)
@@ -235,59 +217,43 @@ struct AddFoodEntryView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .preferredColorScheme(.dark)
             .onAppear {
-                selectedMeal = preselectedMeal ?? currentMealSuggestion()
+                let servings = entry.quantityGrams / max(servingSizeGrams, 1)
+                quantityText = String(format: "%g", servings)
+                selectedUnit = .servings
+                selectedMeal = entry.mealName
+                notes = entry.notes ?? ""
             }
         }
     }
 
     // MARK: - Actions
 
-    private func logEntry() {
-        let entry = FoodEntry(
-            foodItem: foodItem,
-            quantityGrams: quantityInGrams,
-            mealName: selectedMeal
-        )
+    private func saveChanges() {
+        guard quantityInGrams > 0 else { return }
+
+        entry.quantityGrams = quantityInGrams
+        entry.mealName = selectedMeal
         entry.notes = notes.isEmpty ? nil : notes
 
-        // Find or create the DailyLog for the target date
-        let targetDay = targetDate.startOfDay
-        let descriptor = FetchDescriptor<DailyLog>(
-            predicate: #Predicate { $0.date == targetDay }
-        )
-        let log: DailyLog
-        if let existing = try? modelContext.fetch(descriptor).first {
-            log = existing
-        } else {
-            log = DailyLog(date: targetDay)
-            modelContext.insert(log)
+        // Recalculate snapshot macros from current food item data
+        if let item = entry.foodItem {
+            entry.snapshotCalories = item.caloriesPer100g.scaled(by: quantityInGrams)
+            entry.snapshotProtein = item.proteinPer100g.scaled(by: quantityInGrams)
+            entry.snapshotCarbohydrates = item.carbohydratesPer100g.scaled(by: quantityInGrams)
+            entry.snapshotFat = item.fatPer100g.scaled(by: quantityInGrams)
         }
 
-        entry.dailyLog = log
-        log.entries.append(entry)
-        log.recalculateTotals()
+        // Update the parent log's cached totals
+        entry.dailyLog?.recalculateTotals()
 
         try? modelContext.save()
-
         dismiss()
-        onLogged?()
-    }
-
-    /// Suggests the most appropriate meal based on time of day.
-    private func currentMealSuggestion() -> String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        switch hour {
-        case 5..<11: return "Breakfast"
-        case 11..<15: return "Lunch"
-        case 15..<18: return "Snack"
-        default: return "Dinner"
-        }
     }
 }
 
-// MARK: - Subviews
+// MARK: - Subview
 
-private struct NutritionRow: View {
+private struct NutritionEditRow: View {
     let label: String
     let value: String
     let color: Color

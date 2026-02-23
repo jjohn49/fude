@@ -14,6 +14,7 @@ struct FoodSearchResultRow: View {
                 Text(item.name)
                     .font(.subheadline)
                     .lineLimit(2)
+                    .foregroundStyle(.primary)
 
                 if let brand = item.brand {
                     Text(brand)
@@ -27,6 +28,7 @@ struct FoodSearchResultRow: View {
             VStack(alignment: .trailing, spacing: 2) {
                 Text("\(item.caloriesPer100g.roundedCalories) kcal")
                     .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(.primary)
                 Text("per 100g")
                     .font(.caption2)
                     .foregroundStyle(.secondary)

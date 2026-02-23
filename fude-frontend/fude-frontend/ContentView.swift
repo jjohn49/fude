@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
     var body: some View {
@@ -16,4 +17,11 @@ struct ContentView: View {
 #Preview {
     ContentView()
         .environment(AuthViewModel())
+        .modelContainer(previewContainer())
 }
+#Preview("With Sample Data") {
+    ContentView()
+        .environment(AuthViewModel())
+        .modelContainer(previewContainerWithSampleData())
+}
+

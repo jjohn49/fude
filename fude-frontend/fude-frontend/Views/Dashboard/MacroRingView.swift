@@ -28,12 +28,15 @@ struct MacroRingView: View {
                 .animation(.easeInOut(duration: 0.6), value: progress)
 
             // Centre text
+            let remaining = target - consumed
+            let isOver = remaining < 0
             VStack(spacing: 2) {
-                Text("\(consumed.roundedCalories)")
+                Text("\(abs(remaining).roundedCalories)")
                     .font(.title2.bold())
-                Text("of \(target.roundedCalories)")
+                    .foregroundStyle(isOver ? .red : .primary)
+                Text(isOver ? "over" : "remaining")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(isOver ? .red : .secondary)
                 Text("kcal")
                     .font(.caption2)
                     .foregroundStyle(.secondary)

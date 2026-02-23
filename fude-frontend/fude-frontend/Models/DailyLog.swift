@@ -16,6 +16,9 @@ final class DailyLog {
     var totalFat: Double
     var totalFiber: Double
 
+    // Water intake in millilitres (added in schema V2)
+    var waterMl: Double
+
     var entryCount: Int { entries.count }
 
     func recalculateTotals() {
@@ -35,5 +38,6 @@ final class DailyLog {
         self.totalCarbohydrates = 0
         self.totalFat = 0
         self.totalFiber = 0
+        self.waterMl = 0
     }
 }

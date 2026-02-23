@@ -32,7 +32,7 @@
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryDiskSpace</string>
-			<keDy>NSPrivacyAccessedAPITypeReasons</key>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
 			<array>
 				<!-- App functionality: checked before writing food log
 				     entries to the SwiftData store -->

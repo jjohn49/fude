@@ -53,6 +53,10 @@ private struct OFFProduct: Decodable {
         )
         item.brand = brands?.components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces)
         item.servingSizeDescription = servingSize ?? "100g"
+        // Parse numeric grams from the serving_size string (e.g. "1 cup (240g)" → 240)
+        if let sv = servingSize, let grams = OFFProduct.parseServingSizeGrams(from: sv) {
+            item.servingSizeGrams = grams
+        }
         item.imageURL = imageURL
         item.caloriesPer100g = nutriments?.caloriesPer100g ?? 0
         item.proteinPer100g = nutriments?.proteinsPer100g ?? 0
@@ -62,6 +66,21 @@ private struct OFFProduct: Decodable {
         item.sugarPer100g = nutriments?.sugarsPer100g
         item.sodiumPer100mg = nutriments?.sodiumPer100g.map { $0 * 1000 } // g → mg
         return item
+    }
+
+    /// Extracts a gram/ml value from an OpenFoodFacts serving_size string.
+    /// Handles: "100g", "30 g", "250ml", "1 cup (240g)", "1 serving (150 g)"
+    private static func parseServingSizeGrams(from string: String) -> Double? {
+        let s = string.lowercased()
+        // Pass 1: prefer a parenthesized number+g/ml — e.g. "(240g)", "(150 g)"
+        if let match = s.firstMatch(of: /\((\d+(?:\.\d+)?)\s*(?:g|ml)\)/) {
+            return Double(match.output.1)
+        }
+        // Pass 2: first standalone number+g/ml — e.g. "100g", "30 g", "250ml"
+        if let match = s.firstMatch(of: /(\d+(?:\.\d+)?)\s*(?:g|ml)/) {
+            return Double(match.output.1)
+        }
+        return nil
     }
 }
 
