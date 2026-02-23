@@ -97,6 +97,7 @@ struct fude_frontendApp: App {
             .foregroundColor: accent,
             .font: UIFont.systemFont(ofSize: 11, weight: .semibold)
         ]
+
         UITabBar.appearance().standardAppearance = tabBarAppearance
         UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
         UITabBar.appearance().isTranslucent = false

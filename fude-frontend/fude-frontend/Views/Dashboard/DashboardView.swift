@@ -2,33 +2,20 @@ import SwiftUI
 import SwiftData
 
 struct DashboardView: View {
-    @Environment(AuthViewModel.self) private var authViewModel
     @Environment(\.modelContext) private var modelContext
     @Query private var profiles: [UserProfile]
     @Query private var dailyLogs: [DailyLog]
+    @Query private var workouts: [WorkoutSummary]
 
     @State private var showFoodSearch = false
     @State private var ringsAppeared = false
+    @State private var showMacroDrilldown = false
 
     private var profile: UserProfile? { profiles.first }
 
     private var todayLog: DailyLog? {
         let today = Date().startOfDay
         return dailyLogs.first(where: { $0.date == today })
-    }
-
-    private var greeting: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        switch hour {
-        case 0..<12: return "Good morning"
-        case 12..<17: return "Good afternoon"
-        default: return "Good evening"
-        }
-    }
-
-    private var navTitle: String {
-        let firstName = profile?.displayName.components(separatedBy: " ").first ?? ""
-        return "\(greeting)\(firstName.isEmpty ? "" : ", \(firstName)")"
     }
 
     private var calorieTarget: Double  { profile?.dailyCalorieTarget      ?? 2000 }
@@ -51,26 +38,15 @@ struct DashboardView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     heroCard
+                    WeeklyInsightsView(workouts: workouts)
                     waterCard
-                    WeeklyInsightsView(dailyLogs: dailyLogs, calorieTarget: calorieTarget)
                 }
-                .padding(.bottom, 32)
+                .padding(.bottom, 120)
             }
             .background(Color.fudeBackground)
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.fudePerformanceBackground, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    TopBarTitle(text: navTitle)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    TopBarIconButton(systemImage: "plus", accessibilityLabel: "Log food") {
-                        showFoodSearch = true
-                    }
-                }
+            .toolbar(.hidden, for: .navigationBar)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                staticTopBar
             }
         }
         .sheet(isPresented: $showFoodSearch) {
@@ -84,35 +60,66 @@ struct DashboardView: View {
         }
     }
 
+    private var staticTopBar: some View {
+        HStack {
+            Spacer()
+            TopBarIconButton(systemImage: "plus", accessibilityLabel: "Log food") {
+                showFoodSearch = true
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color.fudePerformanceBackground)
+    }
+
     // MARK: - Hero Card
 
     private var heroCard: some View {
         VStack(alignment: .leading, spacing: 20) {
             // Concentric rings with center metric
-            HStack {
-                Spacer()
-                ZStack {
-                    ActivityRingsView(rings: [
-                        .init(progress: progress(calories, calorieTarget), color: .fudeCalorieRing),
-                        .init(progress: progress(protein, proteinTarget),  color: .fudeProtein),
-                        .init(progress: progress(carbs, carbsTarget),      color: .fudeCarbs),
-                        .init(progress: progress(fat, fatTarget),          color: .fudeFat),
-                    ])
-                    let remaining = calorieTarget - calories
-                    VStack(spacing: 2) {
-                        Text("\(abs(Int(remaining)))")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundStyle(remaining < 0 ? Color.red : Color.white)
-                            .monospacedDigit()
-                        Text(remaining < 0 ? "over" : "remaining")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(remaining < 0 ? Color.red.opacity(0.8) : Color.white.opacity(0.55))
-                            .textCase(.uppercase)
-                            .tracking(0.8)
-                    }
+            Button {
+                withAnimation(.easeInOut(duration: 0.55)) {
+                    showMacroDrilldown.toggle()
                 }
-                .frame(width: 200, height: 200)
+            } label: {
+                RingTrendMorphView(
+                    dailyLogs: dailyLogs,
+                    calories: calories,
+                    protein: protein,
+                    carbs: carbs,
+                    fat: fat,
+                    calorieTarget: calorieTarget,
+                    proteinTarget: proteinTarget,
+                    carbsTarget: carbsTarget,
+                    fatTarget: fatTarget,
+                    ringsAppeared: ringsAppeared,
+                    showLineChart: showMacroDrilldown
+                )
+                .frame(maxWidth: .infinity)
+                .aspectRatio(1, contentMode: .fit)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(showMacroDrilldown ? "Hide weekly macro trends" : "Show weekly macro trends")
+
+            HStack(spacing: 6) {
+                Image(systemName: showMacroDrilldown ? "chevron.up.circle.fill" : "waveform.path.ecg")
+                    .font(.caption)
+                    .foregroundStyle(Color.fudeAccentPrimary.opacity(0.9))
+                Text(showMacroDrilldown ? "Trend drilldown expanded" : "Tap rings to unravel 7-day trends")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+                    .textCase(.uppercase)
+                    .tracking(0.6)
                 Spacer()
+                if showMacroDrilldown {
+                    Button("Back to Rings") {
+                        withAnimation(.easeInOut(duration: 0.45)) {
+                            showMacroDrilldown = false
+                        }
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.fudeAccentPrimary.opacity(0.92))
+                }
             }
 
             // Ring legend
@@ -141,6 +148,13 @@ struct DashboardView: View {
                     progress: progress(fat, fatTarget),
                     valueText: "\(Int(fat))g / \(Int(fatTarget))g"
                 )
+            }
+
+            if showMacroDrilldown {
+                MacroTrendDrilldownView(
+                    dailyLogs: dailyLogs
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
             }
         }
         .padding(24)

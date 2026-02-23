@@ -10,6 +10,7 @@ struct FoodLogView: View {
     @State private var selectedDate: Date = Date()
     @State private var showDatePicker = false
     @State private var editingEntry: FoodEntry? = nil
+    @State private var entryPendingDeletion: FoodEntry? = nil
 
     private var isToday: Bool { selectedDate.isToday }
     private var profile: UserProfile? { profiles.first }
@@ -45,15 +46,31 @@ struct FoodLogView: View {
 
                                     VStack(spacing: 8) {
                                         ForEach(entries) { entry in
-                                            Button {
-                                                editingEntry = entry
-                                            } label: {
-                                                FoodEntryCard(entry: entry, meal: meal)
+                                            HStack(spacing: 8) {
+                                                Button {
+                                                    editingEntry = entry
+                                                } label: {
+                                                    FoodEntryCard(entry: entry, meal: meal)
+                                                }
+                                                .buttonStyle(.plain)
+
+                                                Button(role: .destructive) {
+                                                    entryPendingDeletion = entry
+                                                } label: {
+                                                    Image(systemName: "trash")
+                                                        .font(.system(size: 13, weight: .semibold))
+                                                        .frame(width: 30, height: 30)
+                                                        .foregroundStyle(Color.red.opacity(0.75))
+                                                        .background(Color.fudeSurface)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 9))
+                                                }
+                                                .buttonStyle(.plain)
+                                                .opacity(0.9)
+                                                .accessibilityLabel("Delete entry")
                                             }
-                                            .buttonStyle(.plain)
                                             .contextMenu {
                                                 Button(role: .destructive) {
-                                                    deleteEntry(entry: entry, log: log)
+                                                    entryPendingDeletion = entry
                                                 } label: {
                                                     Label("Delete", systemImage: "trash")
                                                 }
@@ -102,6 +119,26 @@ struct FoodLogView: View {
         .sheet(item: $editingEntry) { entry in
             EditFoodEntryView(entry: entry)
                 .presentationDetents([.large])
+        }
+        .confirmationDialog(
+            "Delete this food entry?",
+            isPresented: Binding(
+                get: { entryPendingDeletion != nil },
+                set: { if !$0 { entryPendingDeletion = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let entry = entryPendingDeletion {
+                    deleteEntry(entry: entry)
+                }
+                entryPendingDeletion = nil
+            }
+            Button("Cancel", role: .cancel) {
+                entryPendingDeletion = nil
+            }
+        } message: {
+            Text("This will remove \(entryPendingDeletion?.foodItem?.name ?? "this item") from your log.")
         }
         .task {
             ensureLogExists(for: Date())
@@ -219,10 +256,12 @@ struct FoodLogView: View {
         try? modelContext.save()
     }
 
-    private func deleteEntry(entry: FoodEntry, log: DailyLog) {
-        log.entries.removeAll { $0.id == entry.id }
+    private func deleteEntry(entry: FoodEntry) {
+        if let log = entry.dailyLog {
+            log.entries.removeAll { $0.id == entry.id }
+            log.recalculateTotals()
+        }
         modelContext.delete(entry)
-        log.recalculateTotals()
         try? modelContext.save()
     }
 }

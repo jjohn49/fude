@@ -23,11 +23,11 @@ This repository tracks product and implementation planning in this file. Use it 
 - Keep water tracking secondary and visually de-emphasized.
 - **Implemented:** `ActivityRingsView` (concentric, spring-animated). Ring center ZStack overlay in `DashboardView.heroCard`: remaining kcal (white) / over-goal (red). `RingLegendRow` with per-macro progress bars. Water widget de-emphasised below hero card.
 
-## Phase 4 — Macro Rings: Drilldowns & Trends
+## Phase 4 — Macro Rings: Drilldowns & Trends ✅ Complete
 - Tap ring cluster to “unravel” into a 7‑day line chart of calories + macros.
 - Preserve macro color mapping in the trend chart.
-- Provide a bar-chart fallback if line chart is unavailable.
-- Add an athlete summary strip (weekly sessions, active days, volume trend).
+- Include a micronutrients expansion section in the drilldown panel.
+- **Implemented:** `DashboardView` ring cluster toggles a `MacroTrendDrilldownView` panel in the hero card. Tapping rings triggers a spin/unravel animation into a 7-day multi-line trend (Calories/Protein/Carbs/Fat), preserves macro color tokens, and includes an expandable micronutrients section (fiber/sugar/sodium) computed from logged entries.
 
 ## Phase 5 — Workout Tab: Map + List
 - Two‑mode Workout tab: map-first view and list view of all workouts.
@@ -83,7 +83,7 @@ This repository tracks product and implementation planning in this file. Use it 
 | 7 | Entry tap-to-edit | Tap a logged entry to change qty/meal | `EditFoodEntryView` | ✅ Done |
 | 7a | Serving unit picker | Servings/Grams/lbs in Add + Edit food views | `QuantityUnit` enum, `FoodItem.servingSizeGrams` | ✅ Done |
 | 7b | Local-first search results | SwiftData cache shown immediately; network results in "All Foods" section | `FoodSearchViewModel.localResultCount` | ✅ Done |
-| 8 | Phase 4 — ring drilldown | Tap rings to expand into 7-day trend chart | Nothing | Next up |
+| 8 | Phase 4 — ring drilldown | Tap rings to expand into 7-day trend chart | Nothing | ✅ Done |
 | 9 | Workout session tracking | Active workout with set/rep logging | New `WorkoutSession` + `ExerciseSet` models | Phase 5+ |
 | 10 | Exercise library | Searchable exercise list with muscle group tags | New `Exercise` model | Phase 6 |
 | 11 | Progressive overload display | Show last session's numbers when logging a new set | Depends on 9+10 | Phase 6 |
@@ -109,6 +109,7 @@ This repository tracks product and implementation planning in this file. Use it 
 |-----------|------|--------|
 | `ActivityRingsView` | `Views/Dashboard/ActivityRingsView.swift` | ✅ Implemented — concentric rings, spring-animated |
 | `WeeklyInsightsView` | `Views/Dashboard/WeeklyInsightsView.swift` | ✅ Implemented |
+| `MacroTrendDrilldownView` | `Views/Dashboard/MacroTrendDrilldownView.swift` | ✅ Implemented |
 | `TopBarTitle` | `Views/Components/TopBarTitle.swift` | ✅ Implemented |
 | `TopBarIconButton` | `Views/Components/TopBarIconButton.swift` | ✅ Implemented |
 | `TopBarTextButton` | `Views/Components/TopBarTextButton.swift` | ✅ Implemented |
@@ -142,6 +143,8 @@ This repository tracks product and implementation planning in this file. Use it 
 
 - **Tab bar/toolbar flashing** — custom `safeAreaInset` tab bar should eliminate the stock tab bar flash. If NavigationStack push/pop transitions still flash, investigate `Color.fudePerformanceBackground.ignoresSafeArea()` placement inside each tab's root view.
 - **Profile screen vertical lines** — `.scrollIndicators(.hidden)` and `.scrollContentBackground(.hidden)` have been added to `ProfileView`. Still unresolved if visible in simulator; likely a nested `NavigationStack` or `List` scroll indicator rendering issue.
+- **Food log entry deletion missing in custom UI** — `Views/Food/FoodLogView.swift` currently has no delete affordance in the non-stock list layout. Restore delete functionality (previously available in the old list-based iteration) while preserving the current custom visual style.
+- **Auth screen giant white bar** — auth/onboarding screen shows a large white bar occupying roughly half the screen, breaking the dark-first visual baseline and layout.
 
 ## Constraints
 - HealthKit integration is blocked until a paid Apple Developer account is available.
